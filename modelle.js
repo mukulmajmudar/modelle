@@ -611,7 +611,15 @@ define([], function()
                 this.fetchView()
             ]);
 
+            // Create the view element
             this.createViewElement();
+
+            // Schedule callback for when view is added to DOM
+            setTimeout(async () =>
+            {
+                await idleTillAddedToDOM(this.viewElement);
+                this.onViewAddedToDOM();
+            }, 0);
 
             // Render view
             await this.renderView();
@@ -625,13 +633,9 @@ define([], function()
         }
 
 
-        async onViewAddedToDOM(fn)
+        async onViewAddedToDOM()
         {
-            setTimeout(async () =>
-            {
-                await idleTillAddedToDOM(this.viewElement);
-                fn();
-            }, 0);
+            // Empty by default
         }
 
 
