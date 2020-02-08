@@ -1,1 +1,1 @@
-Simple REST model library in JavaScript.
+Model and controller library in JavaScript.
