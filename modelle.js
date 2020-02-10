@@ -454,7 +454,18 @@ define([], function()
             {
                 for (let key of Object.keys(urlSearchParams))
                 {
-                    url.searchParams.append(key, urlSearchParams[key]);
+                    let value = urlSearchParams[key];
+                    if (Array.isArray(value))
+                    {
+                        for (let v of value)
+                        {
+                            url.searchParams.append(key, v);
+                        }
+                    }
+                    else
+                    {
+                        url.searchParams.append(key, value);
+                    }
                 }
             }
 
@@ -552,9 +563,9 @@ define([], function()
 
 
     /**
-     * Wait till the given element is added to the DOM.
+     * Wait till the given element is on the DOM.
      */
-    async function idleTillAddedToDOM(element)
+    async function idleUntilOnDOM(element)
     {
         if (document.body.contains(element))
         {
@@ -614,15 +625,11 @@ define([], function()
             // Create the view element
             this.createViewElement();
 
-            // Schedule callback for when view is added to DOM
-            setTimeout(async () =>
-            {
-                await idleTillAddedToDOM(this.viewElement);
-                this.onViewAddedToDOM();
-            }, 0);
-
             // Render view
             await this.renderView();
+
+            // Add event listeners
+            this.addEventListeners();
         }
 
 
@@ -630,12 +637,38 @@ define([], function()
         {
             this.viewElement = document.createElement('div');
             this.viewElement.id = this.viewElementId;
+
+            // Store reference to controller in element so it can be
+            // called back by the mutation observer
+            this.viewElement._modelleController = this;
         }
 
 
-        async onViewAddedToDOM()
+        /**
+         * Runs the given function if the view element is currently in the
+         * DOM or when it is added to the DOM.
+         */
+        runWhenViewOnDOM(fn)
+        {
+            // Schedule callback for when view is added to DOM
+            setTimeout(async () =>
+            {
+                await idleUntilOnDOM(this.viewElement);
+                fn();
+            }, 1);
+        }
+
+
+        onViewRemovedFromDOM()
         {
             // Empty by default
+        }
+
+
+        cleanup()
+        {
+            this.stopListening();
+            delete this.viewElement._modelleController;
         }
 
 
@@ -712,6 +745,49 @@ define([], function()
             this.actualEventListeners = {};
         }
     }
+
+
+    let viewElementRemovedObserver = new MutationObserver(async mutations =>
+    {
+        for (let mutation of mutations)
+        {
+            for (let node of mutation.removedNodes)
+            {
+                if (node.querySelectorAll)
+                {
+                    // Callback on descendant views: this has to be done
+                    // manually because only direct node removals are
+                    // considered mutations. And even if the removed node is not a
+                    // view itself, it might have descendants that are views for
+                    // which the mutation will never occur.
+                    let promises = [];
+                    let descendantEls = node.querySelectorAll('*');
+                    /* eslint-disable max-depth */
+                    for (let descendantEl of descendantEls)
+                    {
+                        if (descendantEl._modelleController)
+                        {
+                            promises.push(descendantEl._modelleController.onViewRemovedFromDOM());
+                        }
+                    }
+                    /* eslint-enable max-depth */
+                    await Promise.all(promises);
+                }
+
+                // If the removed node is a view itself, call cleanup
+                if (node._modelleController)
+                {
+                    await node._modelleController.onViewRemovedFromDOM();
+                }
+            }
+        }
+    });
+
+    viewElementRemovedObserver.observe(document.body,
+    {
+        childList: true,
+        subtree: true
+    });
 
 
     return {
