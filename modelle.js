@@ -582,11 +582,34 @@ define([], function()
                     // For each added node
                     for (let node of mutation.addedNodes)
                     {
+                        // Check if the node is the element we are 
+                        // waiting for
                         if (node === element)
                         {
                             resolve();
                             observer.disconnect();
                             return;
+                        }
+
+                        // Check if any of the node's descendants
+                        // is the element we are waiting for. This
+                        // has to be done manually because only direct
+                        // node additions are considered mutations. Even
+                        // if the added node is not the element itself, it
+                        // might have a descendant that is the element but
+                        // for which the mutation will never occur.
+                        if (node.querySelectorAll)
+                        {
+                            let descendantEls = node.querySelectorAll('*');
+                            for (let descendantEl of descendantEls)
+                            {
+                                if (descendantEl === element)
+                                {
+                                    resolve();
+                                    observer.disconnect();
+                                    return;
+                                }
+                            }
                         }
                     }
                 });
@@ -608,7 +631,8 @@ define([], function()
             Object.assign(this, Events,
             {
                 actualEventListeners: {},
-                viewElementId: options.viewElementId
+                viewElementId: options.viewElementId,
+                viewElement: options.viewElement
             });
         }
 
@@ -623,7 +647,14 @@ define([], function()
             ]);
 
             // Create the view element
-            this.createViewElement();
+            if (!this.viewElement)
+            {
+                this.createViewElement();
+            }
+            else
+            {
+                this.viewElement._modelleController = this;
+            }
 
             // Render view
             await this.renderView();
@@ -635,12 +666,21 @@ define([], function()
 
         createViewElement()
         {
-            this.viewElement = document.createElement('div');
-            this.viewElement.id = this.viewElementId;
+            this.viewElement = document.createElement(this.getViewElementTag());
+            if (this.viewElementId)
+            {
+                this.viewElement.id = this.viewElementId;
+            }
 
             // Store reference to controller in element so it can be
             // called back by the mutation observer
             this.viewElement._modelleController = this;
+        }
+
+
+        getViewElementTag()
+        {
+            return 'div';
         }
 
 
