@@ -355,6 +355,10 @@ define([], function()
         async fetch(attributes)
         {
             let url = await this.getUrl();
+            if (typeof url === 'string')
+            {
+                url = new URL(url);
+            }
             if (attributes)
             {
                 let attributeModelCreators = this._getAttributeModelCreators();
@@ -637,13 +641,13 @@ define([], function()
         }
 
 
-        async run()
+        async run(options = {fetchData: true, fetchView: true})
         {
             // Fetch data and view
             await Promise.all(
             [
-                this.fetchData(),
-                this.fetchView()
+                options.fetchData && this.fetchData(),
+                options.fetchView && this.fetchView()
             ]);
 
             // Create the view element
@@ -699,6 +703,12 @@ define([], function()
         }
 
 
+        /**
+         * Hook for when this controller's view is removed from the DOM.
+         * Usually, cleanup() should be called here. But it is not called
+         * in this base class to maintain clear separation between controller
+         * and view.
+         */
         onViewRemovedFromDOM()
         {
             // Empty by default
@@ -830,12 +840,102 @@ define([], function()
     });
 
 
+    // https://stackoverflow.com/a/35385518
+    function htmlToElement(html)
+    {
+        let template = document.createElement('template');
+
+        // Never return a text node of whitespace as the result
+        html = html.trim();
+        template.innerHTML = html;
+        return template.content.firstChild;
+    }
+
+
+    // https://stackoverflow.com/a/35385518
+    function htmlToElements(html)
+    {
+        let template = document.createElement('template');
+        template.innerHTML = html;
+        return template.content.childNodes;
+    }
+
+
+    /**
+     * Append a CSS transition to an element instead of overwriting the
+     * current value. This is useful if multiple CSS transitions are needed
+     * simultaneously but you can't manage them from the same place 
+     * (for example, if you are implementing a custom slide animation and 
+     * also need to use fadeIn()).
+     */
+    function appendCssTransition(el, transition, prefixedValues)
+    {
+        for (let prefix of ['', '-webkit-', '-moz-', '-o-', '-ms-'])
+        {
+            let value = prefixedValues ? prefix + transition : transition;
+            let existingValue = el.style.transition;
+            if (!existingValue || existingValue === 'all 0s ease 0s')
+            {
+                el.style.transition = value;
+            }
+            else if (existingValue.indexOf(value) === -1)
+            {
+                value = `${existingValue}, ${value}`;
+                el.style.transition = value;
+            }
+        }
+    }
+
+
+    async function fadeIn(el, durationInMs)
+    {
+        if (!durationInMs)
+        {
+            durationInMs = 300;
+        }
+        await new Promise(resolve =>
+        {
+            const cssDuration = `${durationInMs / 1000}s`;
+            appendCssTransition(el, `opacity ${cssDuration} ease 0s`);
+            el.style.opacity = 1;
+
+            // Resolve after durationInMs (sometimes transitionend events don't 
+            // fire so we just use a timeout)
+            setTimeout(resolve, durationInMs);
+        });
+    }
+
+
+    async function fadeOut(el, durationInMs)
+    {
+        if (!durationInMs)
+        {
+            durationInMs = 300;
+        }
+        await new Promise(resolve =>
+        {
+            const cssDuration = `${durationInMs / 1000}s`;
+            appendCssTransition(el, `opacity ${cssDuration} ease 0s`);
+            el.style.opacity = 0;
+
+            // Resolve after durationInMs (sometimes transitionend events don't 
+            // fire so we just use a timeout)
+            setTimeout(resolve, durationInMs);
+        });
+    }
+
+
     return {
         Model,
         Collection,
         Controller,
         fetch: fetch2,
         FetchError,
-        HttpError
+        HttpError,
+        htmlToElement,
+        htmlToElements,
+        appendCssTransition,
+        fadeIn,
+        fadeOut
     };
 });
