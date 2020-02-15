@@ -369,7 +369,7 @@ define([], function()
                         continue;
                     }
                     let modelCreator = attributeModelCreators[attribute];
-                    this[attribute] = modelCreator();
+                    this[attribute] = await modelCreator();
                     attributes.splice(attributes.indexOf(attribute), 1);
                 }
 
@@ -635,50 +635,54 @@ define([], function()
             Object.assign(this, Events,
             {
                 actualEventListeners: {},
-                viewElementId: options.viewElementId,
-                viewElement: options.viewElement
+                viewElementId: options && options.viewElementId,
             });
         }
 
 
-        async run(options = {fetchData: true, fetchView: true})
+        /**
+         * Convenience method for common execution flow.
+         */
+        async run()
         {
-            // Fetch data and view
-            await Promise.all(
-            [
-                options.fetchData && this.fetchData(),
-                options.fetchView && this.fetchView()
-            ]);
-
             // Create the view element
             if (!this.viewElement)
             {
                 this.createViewElement();
             }
-            else
-            {
-                this.viewElement._modelleController = this;
-            }
+
+            // Prepare data and view
+            await Promise.all(
+            [
+                this.prepareData(),
+                this.prepareView()
+            ]);
 
             // Render view
             await this.renderView();
-
-            // Add event listeners
-            this.addEventListeners();
         }
 
 
         createViewElement()
         {
-            this.viewElement = document.createElement(this.getViewElementTag());
+            let element = document.createElement(this.getViewElementTag());
+            this.setViewElement(element);
+        }
+
+
+        setViewElement(element)
+        {
             if (this.viewElementId)
             {
-                this.viewElement.id = this.viewElementId;
+                element.id = this.viewElementId;
             }
+            this.viewElement = element;
 
             // Store reference to controller in element so it can be
             // called back by the mutation observer
             this.viewElement._modelleController = this;
+
+            this.addEventListeners();
         }
 
 
@@ -728,13 +732,13 @@ define([], function()
         }
 
 
-        async fetchData()
+        async prepareData()
         {
             // Empty by default
         }
 
 
-        async fetchView()
+        async prepareView()
         {
             // Empty by default
         }
@@ -795,6 +799,7 @@ define([], function()
             this.actualEventListeners = {};
         }
     }
+    Controller.AbortException = class extends Error {};
 
 
     let viewElementRemovedObserver = new MutationObserver(async mutations =>
