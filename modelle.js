@@ -652,7 +652,7 @@ define([], function()
             ]);
 
             // Create the view element
-            if (!this.viewElement)
+            if (!this.el)
             {
                 this.createViewElement();
             }
@@ -676,11 +676,12 @@ define([], function()
             {
                 element.id = viewElementId;
             }
-            this.viewElement = element;
+            this.el = this.viewElement = element;
+            this.qs = this.el.querySelector.bind(this.el);
 
             // Store reference to controller in element so it can be
             // called back by the mutation observer
-            this.viewElement._modelleController = this;
+            this.el._modelleController = this;
 
             this.addEventListeners();
         }
@@ -707,7 +708,7 @@ define([], function()
             // Schedule callback for when view is added to DOM
             setTimeout(async () =>
             {
-                await idleUntilOnDOM(this.viewElement);
+                await idleUntilOnDOM(this.el);
                 fn();
             }, 1);
         }
@@ -728,7 +729,7 @@ define([], function()
         cleanup()
         {
             this.stopListening();
-            delete this.viewElement._modelleController;
+            delete this.el._modelleController;
         }
 
 
@@ -788,7 +789,7 @@ define([], function()
                     }
                 };
 
-                this.viewElement.addEventListener(eventName, actualEventListener);
+                this.el.addEventListener(eventName, actualEventListener);
                 this.actualEventListeners[eventName] = actualEventListener;
             }
         }
@@ -798,7 +799,7 @@ define([], function()
         {
             for (let eventName in Object.keys(this.actualEventListeners))
             {
-                this.viewElement.removeEventListener(eventName,
+                this.el.removeEventListener(eventName,
                     this.actualEventListeners[eventName]);
             }
 
