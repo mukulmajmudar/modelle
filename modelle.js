@@ -634,8 +634,7 @@ define([], function()
         {
             Object.assign(this, Events,
             {
-                actualEventListeners: {},
-                viewElementId: options && options.viewElementId,
+                actualEventListeners: {}
             });
         }
 
@@ -645,18 +644,18 @@ define([], function()
          */
         async run()
         {
-            // Create the view element
-            if (!this.viewElement)
-            {
-                this.createViewElement();
-            }
-
             // Prepare data and view
             await Promise.all(
             [
                 this.prepareData(),
                 this.prepareView()
             ]);
+
+            // Create the view element
+            if (!this.viewElement)
+            {
+                this.createViewElement();
+            }
 
             // Render view
             await this.renderView();
@@ -672,9 +671,10 @@ define([], function()
 
         setViewElement(element)
         {
-            if (this.viewElementId)
+            const viewElementId = this.getViewElementId();
+            if (viewElementId)
             {
-                element.id = this.viewElementId;
+                element.id = viewElementId;
             }
             this.viewElement = element;
 
@@ -689,6 +689,12 @@ define([], function()
         getViewElementTag()
         {
             return 'div';
+        }
+
+
+        getViewElementId()
+        {
+            return null;
         }
 
 
@@ -746,7 +752,7 @@ define([], function()
 
         renderView()
         {
-            throw new Error('not implemented');
+            // Empty by default
         }
 
 
