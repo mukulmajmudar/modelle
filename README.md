@@ -1,4 +1,4 @@
-# Modelle: A Modern MVC framework for JavaScript Apps
+# Modelle: A Modern MVC Framework for JavaScript Apps
 
 ## Why a New Framework?
 There are many JavaScript frameworks out there that have cool, advanced features and support quick development, but few of them properly separate view and controller concerns in accordance with the [Model-View-Controller](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller) design pattern. In most popular frameworks, the controller is merged in with the view, which makes UI development less intuitive and fools you into believing that the view is something which it is not.
