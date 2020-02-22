@@ -640,16 +640,22 @@ define([], function()
 
 
         /**
+         * Initialize the controller. For example, fetch data from a server
+         * and fetch an HTML template to render in renderView().
+         */
+        async initialize()
+        {
+            // Empty by default
+        }
+
+
+        /**
          * Convenience method for common execution flow.
          */
         async run()
         {
-            // Prepare data and view
-            await Promise.all(
-            [
-                this.prepareData(),
-                this.prepareView()
-            ]);
+            // Initialize the controller
+            await this.initialize();
 
             // Create the view element
             if (!this.el)
@@ -736,18 +742,6 @@ define([], function()
         getEventListeners()
         {
             return {};
-        }
-
-
-        async prepareData()
-        {
-            // Empty by default
-        }
-
-
-        async prepareView()
-        {
-            // Empty by default
         }
 
 
