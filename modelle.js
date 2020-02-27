@@ -2,6 +2,7 @@ define([], function()
 {
     'use strict';
 
+    /* eslint-disable */
   // Backbone.Events
   // ---------------
 
@@ -262,6 +263,8 @@ define([], function()
   // Aliases for backwards compatibility.
   Events.bind   = Events.on;
   Events.unbind = Events.off;
+
+    /* eslint-enable */
 
     class FetchError extends Error {}
 
@@ -553,6 +556,7 @@ define([], function()
         }
 
 
+        // eslint-disable-next-line
         async createItem(itemAttributes)
         {
             throw new Error('not implemented');
@@ -630,7 +634,7 @@ define([], function()
 
     class Controller
     {
-        constructor(options)
+        constructor()
         {
             Object.assign(this, Events,
             {
@@ -762,7 +766,16 @@ define([], function()
                 {
                     for (let selector of Object.keys(eventListeners))
                     {
-                        let el = event.target.closest(selector)
+                        let el;
+                        if (selector)
+                        {
+                            el = event.target.closest(selector);
+                        }
+                        else
+                        {
+                            // Empty selector means listen on view element
+                            el = this.el;
+                        }
                         if (el)
                         {
                             let clonedEvent = Object.assign({}, event, 
@@ -791,7 +804,7 @@ define([], function()
 
         removeEventListeners()
         {
-            for (let eventName in Object.keys(this.actualEventListeners))
+            for (let eventName of Object.keys(this.actualEventListeners))
             {
                 this.el.removeEventListener(eventName,
                     this.actualEventListeners[eventName]);
@@ -931,6 +944,92 @@ define([], function()
     }
 
 
+    let loadedStyleSheets = {};
+
+    /**
+     * Adapted from http://stackoverflow.com/a/5537911/1196816
+     */
+    function loadStyleSheet(styleSheet, options)
+    {
+        let parent;
+        if (options && options.parentId)
+        {
+            parent = document.getElementById(options.parentId);
+            if (!parent)
+            {
+                throw new Error(`No element found with ID ${options.parentId}`);
+            }
+        }
+        else
+        {
+            // Insert in head element by default
+            parent = document.getElementsByTagName('head')[0];
+        }
+
+        let href = styleSheet.href ? styleSheet.href : styleSheet;
+        if (options && options.baseUrl)
+        {
+            href = options.baseUrl + href;
+        }
+
+        // Create the link node
+        let link = document.createElement('link');
+        link.setAttribute('href', href);
+        link.setAttribute('rel', 'stylesheet');
+        link.setAttribute('type', 'text/css');
+        if (styleSheet.media)
+        {
+            link.setAttribute('media', styleSheet.media);
+        }
+
+        // Resolve on both success and error and return a response object
+        // (like fetch API)
+        let promise = new Promise(resolve =>
+        {
+            link.onload = () => resolve ({ok: true, status: 200, text: () => null});
+            link.onerror = () => resolve({ok: false, status: 'error'});
+        });
+
+        // Insert the link node into the DOM and start loading the style
+        // sheet
+        parent.appendChild(link);
+
+        return promise;
+    }
+
+
+    async function importCSS(css, options)
+    {
+        if (Array.isArray(css))
+        {
+            if (options && options.orderMatters)
+            {
+                for (let ss of css)
+                {
+                    await importCSS(ss, options);
+                }
+            }
+            else
+            {
+                // Load simultaneously
+                return Promise.all(css.map(
+                    ss => importCSS(ss, options)));
+            }
+        }
+        if (css in loadedStyleSheets && (options && !options.parentId))
+        {
+            return Promise.resolve({ok: true, status: 200, text: () => null});
+        }
+
+        let response = await loadStyleSheet(css, options);
+        if (response.ok)
+        {
+            loadedStyleSheets[css] = true;
+        }
+        return response;
+    }
+
+
     return {
         Model,
         Collection,
@@ -942,6 +1041,7 @@ define([], function()
         htmlToElements,
         appendCssTransition,
         fadeIn,
-        fadeOut
+        fadeOut,
+        importCSS
     };
 });
