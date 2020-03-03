@@ -778,9 +778,11 @@ define([], function()
                         }
                         if (el)
                         {
-                            let clonedEvent = Object.assign({}, event, 
+                            let clonedEvent = Object.assign({}, event,
                             {
-                                target: el
+                                target: el,
+                                stopPropagation: () => event.stopPropagation(),
+                                preventDefault: () => event.preventDefault()
                             });
                             let listener = eventListeners[selector];
                             if (typeof listener === 'string')
@@ -986,7 +988,7 @@ define([], function()
         // (like fetch API)
         let promise = new Promise(resolve =>
         {
-            link.onload = () => resolve ({ok: true, status: 200, text: () => null});
+            link.onload = () => resolve({ok: true, status: 200, text: () => null});
             link.onerror = () => resolve({ok: false, status: 'error'});
         });
 
