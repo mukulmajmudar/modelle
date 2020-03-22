@@ -1062,10 +1062,232 @@ define([], function()
     }
 
 
+    class ValidationError extends Error
+    {
+        constructor(errors)
+        {
+            super();
+            if (!errors)
+            {
+                errors = {};
+            }
+            this.errors = errors;
+        }
+    }
+
+
+    class FormController extends Controller
+    {
+        constructor(options)
+        {
+            options = Object.assign(
+            {
+                errorClass: 'erroneousInput',
+
+                // Default attribute setter assigns property
+                modelAttributeSetter: (model, attribute, value) =>
+                {
+                    model[attribute] = value;
+                }
+            }, options);
+            super(options);
+            Object.assign(this,
+            {
+                submitBtnSelector: options.submitBtnSelector,
+                cancelBtnSelector: options.cancelBtnSelector,
+                model: options.model,
+                errorClass: options.errorClass,
+                modelAttributeSetter: options.modelAttributeSetter,
+                onSubmitted: options.onSubmitted,
+                onSubmitError: options.onSubmitError,
+                onCanceled: options.onCanceled
+            });
+        }
+
+
+        getEventListeners()
+        {
+            let clickHandlers = {};
+            clickHandlers[this.submitBtnSelector] = 'submit';
+            clickHandlers[this.cancelBtnSelector] = 'cancel';
+            return {click: clickHandlers};
+        }
+
+
+        normalize(modelFormMap)
+        {
+            // Normalize model form map
+            for (let attribute in modelFormMap)
+            {
+                if (!(Object.prototype.hasOwnProperty.call(modelFormMap, attribute)))
+                {
+                    continue;
+                }
+                let map = modelFormMap[attribute];
+
+                // Default value transformer is identity function
+                if (!map.transformValue)
+                {
+                    map.transformValue = value => value;
+                }
+
+                // Default value reader is value property of the element
+                if (!map.formValueReader)
+                {
+                    map.formValueReader = el => el.value;
+                }
+
+                // Default error class element is the attribute element
+                if (!map.errorClassEl)
+                {
+                    map.errorClassEl = map.el;
+                }
+
+                // Default error class for each attribute is the
+                // common one
+                if (!map.errorClass)
+                {
+                    map.errorClass = this.errorClass;
+                }
+            }
+        }
+
+
+        async validate()
+        {
+            let modelFormMap = this.getModelFormMap();
+            this.normalize(modelFormMap);
+
+            // Clear form of any errors
+            for (let attribute in modelFormMap)
+            {
+                if (!(Object.prototype.hasOwnProperty.call(modelFormMap, attribute)))
+                {
+                    continue;
+                }
+                let map = modelFormMap[attribute];
+                if (map.errorMessageEl)
+                {
+                    map.errorMessageEl.innerHTML = '';
+                    map.el.classList.remove(map.errorClass);
+                    map.errorMessageEl.classList.add('hidden');
+                }
+            }
+
+            await this.readFormIntoModel(modelFormMap);
+            try
+            {
+                await this.model.validate();
+            }
+            catch(e)
+            {
+                /* eslint-disable max-depth */
+                if (e instanceof ValidationError)
+                {
+                    for (let erroneousAttribute in e.errors)
+                    {
+                        if (!(Object.prototype.hasOwnProperty.call(e.errors, erroneousAttribute)))
+                        {
+                            continue;
+                        }
+                        const error = e.errors[erroneousAttribute];
+                        let mapping = modelFormMap[erroneousAttribute];
+                        if (mapping.errorMessageEl)
+                        {
+                            if (error.message)
+                            {
+                                mapping.errorMessageEl.innerHTML = error.message;
+                            }
+                            else if (mapping.errorMessages && mapping.errorMessages[error.code])
+                            {
+                                mapping.errorMessageEl.innerHTML = mapping.errorMessages[error.code];
+                            }
+                        }
+                        mapping.el.classList.add(mapping.errorClass);
+                        mapping.errorMessageEl.classList.remove('hidden');
+                    }
+                }
+                /* eslint-enable max-depth */
+
+                throw e;
+            }
+        }
+
+
+        async readFormIntoModel(modelFormMap)
+        {
+            for (let attribute in modelFormMap)
+            {
+                if (!(Object.prototype.hasOwnProperty.call(modelFormMap, attribute)))
+                {
+                    continue;
+                }
+                let mapping = modelFormMap[attribute];
+                const value = await mapping.transformValue(
+                    mapping.formValueReader(mapping.el));
+                this.modelAttributeSetter(this.model, attribute, value);
+            }
+        }
+
+
+        async submit()
+        {
+            try
+            {
+                await this.validate();
+            }
+            catch(e)
+            {
+                if (!(e instanceof ValidationError))
+                {
+                    throw e;
+                }
+                return;
+            }
+            try
+            {
+                await this.saveModel();
+            }
+            catch(e)
+            {
+                this.onSubmitError(e);
+                return;
+            }
+            this.onSubmitted();
+        }
+
+
+        cancel()
+        {
+            this.onCanceled();
+        }
+
+
+        /**
+         * Override to provide a map of model attribute => form components.
+         */
+        getModelFormMap()
+        {
+            throw new Error('not implemented');
+        }
+
+
+        /**
+         * Override to customize how to save the model.
+         */
+        async saveModel()
+        {
+            await this.model.save();
+        }
+    }
+
+
     return {
         Model,
         Collection,
         Controller,
+        FormController,
+        ValidationError,
         fetch: fetch2,
         FetchError,
         HttpError,
