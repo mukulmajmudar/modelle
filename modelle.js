@@ -331,9 +331,13 @@ define([], function()
 
     class Model
     {
-        constructor(attributes)
+        constructor(attributes, options)
         {
             Object.assign(this, attributes, Events);
+            this._modelleOptions = Object.assign(
+            {
+                idAttribute: 'id'
+            }, options);
         }
 
 
@@ -403,10 +407,36 @@ define([], function()
 
         async save()
         {
-            if (!this.id)
+            if (this._modelleOptions.idAttribute in this)
+            {
+                await this._update();
+            }
+            else
             {
                 await this._create();
             }
+        }
+
+
+        async _update()
+        {
+            let url = await this.getUrl();
+
+            // Exclude _modelleOptions attribute from request
+            let attributes = Object.assign({}, this);
+            delete attributes[this._modelleOptions.idAttribute];
+
+            let response = await fetch2(url,
+            {
+                method: 'PUT',
+                headers: Object.assign(
+                {
+                    'Content-Type': 'application/json; charset=UTF-8'
+                }, this.getHeaders()),
+                body: JSON.stringify(attributes)
+            });
+            Object.assign(this, response);
+            this.trigger('changed');
         }
 
 
