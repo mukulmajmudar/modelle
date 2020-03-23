@@ -421,11 +421,6 @@ define([], function()
         async _update()
         {
             let url = await this.getUrl();
-
-            // Exclude _modelleOptions attribute from request
-            let attributes = Object.assign({}, this);
-            delete attributes[this._modelleOptions.idAttribute];
-
             let response = await fetch2(url,
             {
                 method: 'PUT',
@@ -433,7 +428,7 @@ define([], function()
                 {
                     'Content-Type': 'application/json; charset=UTF-8'
                 }, this.getHeaders()),
-                body: JSON.stringify(attributes)
+                body: JSON.stringify(this)
             });
             Object.assign(this, response);
             this.trigger('changed');
@@ -443,7 +438,7 @@ define([], function()
         async _create()
         {
             let url = this.getCollectionUrl();
-            let response = fetch2(url,
+            let response = await fetch2(url,
             {
                 method: 'POST',
                 headers: Object.assign(
@@ -460,6 +455,13 @@ define([], function()
         _getAttributeModelCreators()
         {
             return {};
+        }
+
+
+        toJSON()
+        {
+            let jsonObject = Object.assign({}, this);
+            delete jsonObject._modelleOptions; return jsonObject;
         }
     }
 
@@ -1098,8 +1100,8 @@ define([], function()
                 model: options.model,
                 errorClass: options.errorClass,
                 modelAttributeSetter: options.modelAttributeSetter,
-                onSubmitted: options.onSubmitted,
-                onSubmitError: options.onSubmitError,
+                onSubmitted: options.onSubmitted ? options.onSubmitted : this.onSubmitted,
+                onSubmitError: options.onSubmitError ? options.onSubmitError : this.onSubmitError, 
                 onCanceled: options.onCanceled
             });
         }
@@ -1155,8 +1157,7 @@ define([], function()
 
         async validate()
         {
-            let modelFormMap = this.getModelFormMap();
-            this.normalize(modelFormMap);
+            let modelFormMap = this._normalizedModelFormMap;
 
             // Clear form of any errors
             for (let attribute in modelFormMap)
@@ -1203,8 +1204,18 @@ define([], function()
                                 mapping.errorMessageEl.innerHTML = mapping.errorMessages[error.code];
                             }
                         }
+                        else
+                        {
+                            if (mapping.errorMessages && mapping.errorMessages[error.code])
+                            {
+                                mapping.errorMessages[error.code]();
+                            }
+                        }
                         mapping.el.classList.add(mapping.errorClass);
-                        mapping.errorMessageEl.classList.remove('hidden');
+                        if (mapping.errorMessageEl)
+                        {
+                            mapping.errorMessageEl.classList.remove('hidden');
+                        }
                     }
                 }
                 /* eslint-enable max-depth */
@@ -1223,8 +1234,8 @@ define([], function()
                     continue;
                 }
                 let mapping = modelFormMap[attribute];
-                const value = await mapping.transformValue(
-                    mapping.formValueReader(mapping.el));
+                const formValue = await mapping.formValueReader(mapping.el);
+                const value = await mapping.transformValue(formValue);
                 this.modelAttributeSetter(this.model, attribute, value);
             }
         }
@@ -1232,28 +1243,82 @@ define([], function()
 
         async submit()
         {
+            this.showLoadingSpinner();
+            this._normalizedModelFormMap = this.getModelFormMap();
+            this.normalize(this._normalizedModelFormMap);
+            this.disableAllInputs();
             try
             {
-                await this.validate();
-            }
-            catch(e)
-            {
-                if (!(e instanceof ValidationError))
+                try
                 {
-                    throw e;
+                    await this.validate();
                 }
-                return;
+                catch(e)
+                {
+                    if (!(e instanceof ValidationError))
+                    {
+                        throw e;
+                    }
+                    return;
+                }
+                try
+                {
+                    await this.saveModel();
+                }
+                catch(e)
+                {
+                    this.onSubmitError(e);
+                    return;
+                }
+                this.onSubmitted();
             }
-            try
+            finally
             {
-                await this.saveModel();
+                this.removeLoadingSpinner();
+                this.enableAllInputs();
             }
-            catch(e)
+        }
+
+
+        disableAllInputs()
+        {
+            for (let attribute of Object.keys(this._normalizedModelFormMap))
             {
-                this.onSubmitError(e);
-                return;
+                let map = this._normalizedModelFormMap[attribute];
+                if (map.disableInput)
+                {
+                    map.disableInput();
+                    continue;
+                }
+                map.el.disabled = true;
             }
-            this.onSubmitted();
+            this.qs(this.submitBtnSelector).disabled = true;
+        }
+
+
+        enableAllInputs()
+        {
+            for (let attribute of Object.keys(this._normalizedModelFormMap))
+            {
+                let map = this._normalizedModelFormMap[attribute];
+                if (map.enableInput)
+                {
+                    map.enableInput();
+                    continue;
+                }
+                map.el.disabled = false;
+            }
+            this.qs(this.submitBtnSelector).disabled = false;
+        }
+
+
+        showLoadingSpinner()
+        {
+        }
+
+
+        removeLoadingSpinner()
+        {
         }
 
 
