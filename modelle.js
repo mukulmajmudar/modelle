@@ -461,7 +461,8 @@ define([], function()
         toJSON()
         {
             let jsonObject = Object.assign({}, this);
-            delete jsonObject._modelleOptions; return jsonObject;
+            delete jsonObject._modelleOptions;
+            return jsonObject;
         }
     }
 
@@ -1314,11 +1315,13 @@ define([], function()
 
         showLoadingSpinner()
         {
+            // Override
         }
 
 
         removeLoadingSpinner()
         {
+            // Override
         }
 
 
