@@ -290,6 +290,11 @@ define([], function()
             parseResponse: true
         }, options);
 
+        if (options.acceptableStatusCodes.length > 0)
+        {
+            options.parseResponse = false;
+        }
+
         let response;
         try
         {
@@ -314,6 +319,10 @@ define([], function()
                 return response;
             }
             const contentType = response.headers.get('Content-Type');
+            if (!contentType)
+            {
+                return response;
+            }
             let parsedResponse;
             if (contentType.indexOf('application/json') === 0)
             {
@@ -820,6 +829,10 @@ define([], function()
                             let listener = eventListeners[selector];
                             if (typeof listener === 'string')
                             {
+                                if (!this[listener])
+                                {
+                                    throw new Error('Event listener method not found.');
+                                }
                                 this[listener](clonedEvent);
                             }
                             else
@@ -1258,7 +1271,7 @@ define([], function()
                 {
                     if (!(e instanceof ValidationError))
                     {
-                        throw e;
+                        this.onSubmitError(e);
                     }
                     return;
                 }
