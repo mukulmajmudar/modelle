@@ -1017,7 +1017,7 @@ define([], function()
         let href = styleSheet.href ? styleSheet.href : styleSheet;
         if (options && options.baseUrl)
         {
-            href = options.baseUrl + href;
+            href = `${options.baseUrl}/${href}`;
         }
 
         // Create the link node
