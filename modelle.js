@@ -886,6 +886,10 @@ define([], function()
                         {
                             promises.push(descendantEl._modelleController.onViewRemovedFromDOM());
                         }
+                        else if (descendantEl.viewProperties && descendantEl.viewProperties.onViewRemovedFromDOM)
+                        {
+                            promises.push(descendantEl.viewProperties.onViewRemovedFromDOM());
+                        }
                     }
                     /* eslint-enable max-depth */
                     await Promise.all(promises);
@@ -895,6 +899,10 @@ define([], function()
                 if (node._modelleController)
                 {
                     await node._modelleController.onViewRemovedFromDOM();
+                }
+                else if (node.viewProperties && node.viewProperties.onViewRemovedFromDOM)
+                {
+                    await node.viewProperties.onViewRemovedFromDOM();
                 }
             }
         }
@@ -1017,7 +1025,7 @@ define([], function()
         let href = styleSheet.href ? styleSheet.href : styleSheet;
         if (options && options.baseUrl)
         {
-            href = `${options.baseUrl}/${href}`;
+            href = options.baseUrl + href;
         }
 
         // Create the link node
@@ -1363,6 +1371,103 @@ define([], function()
     }
 
 
+    function defineView(properties)
+    {
+        if (!properties.tag)
+        {
+            properties.tag = 'div';
+        }
+        if (!properties.el)
+        {
+            properties.el = document.createElement(properties.tag);
+        }
+
+        if (properties.id)
+        {
+            properties.el.id = properties.id;
+        }
+
+        let el = properties.el;
+
+        el.viewProperties = properties;
+
+        let customViewRemovedHandler;
+        if (properties.onViewRemovedFromDOM)
+        {
+            customViewRemovedHandler = properties.onViewRemovedFromDOM;
+        }
+        properties.onViewRemovedFromDOM = async function()
+        {
+            if (customViewRemovedHandler)
+            {
+                await customViewRemovedHandler(el.viewProperties);
+            }
+            delete el.viewProperties;
+            delete el._modelleActualEventListeners;
+        };
+
+        addEventListeners(properties.el, properties.eventListeners);
+    }
+
+
+    function addEventListeners(el, eventListenersMap)
+    {
+        removeEventListeners(el);
+        for (let eventName of Object.keys(eventListenersMap))
+        {
+            let eventListeners = eventListenersMap[eventName];
+            let actualEventListener = event =>
+            {
+                for (let selector of Object.keys(eventListeners))
+                {
+                    let element;
+                    if (selector)
+                    {
+                        element = event.target.closest(selector);
+                    }
+                    else
+                    {
+                        // Empty selector means listen on view element
+                        element = el;
+                    }
+                    if (element)
+                    {
+                        let clonedEvent = Object.assign({}, event,
+                        {
+                            viewElement: el,
+                            target: element,
+                            stopPropagation: () => event.stopPropagation(),
+                            preventDefault: () => event.preventDefault()
+                        });
+                        let listener = eventListeners[selector];
+                        listener(clonedEvent);
+                        return;
+                    }
+                }
+            };
+
+            el.addEventListener(eventName, actualEventListener);
+            el._modelleActualEventListeners[eventName] = actualEventListener;
+        }
+    }
+
+
+    function removeEventListeners(el)
+    {
+        if (!el._modelleActualEventListeners)
+        {
+            el._modelleActualEventListeners = {};
+        }
+        for (let eventName of Object.keys(el._modelleActualEventListeners))
+        {
+            el.removeEventListener(eventName,
+                el._modelleActualEventListeners[eventName]);
+        }
+
+        el._modelleActualEventListeners = {};
+    }
+
+
     return {
         Model,
         Collection,
@@ -1377,6 +1482,7 @@ define([], function()
         appendCssTransition,
         fadeIn,
         fadeOut,
-        importCSS
+        importCSS,
+        defineView
     };
 });
