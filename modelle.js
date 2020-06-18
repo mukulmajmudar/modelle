@@ -757,12 +757,7 @@ define([], function()
          */
         runWhenViewOnDOM(fn)
         {
-            // Schedule callback for when view is added to DOM
-            setTimeout(async () =>
-            {
-                await idleUntilOnDOM(this.el);
-                fn();
-            }, 1);
+            runOnceOnDOM(this.el, fn);
         }
 
 
@@ -886,9 +881,9 @@ define([], function()
                         {
                             promises.push(descendantEl._modelleController.onViewRemovedFromDOM());
                         }
-                        else if (descendantEl.viewProperties && descendantEl.viewProperties.onViewRemovedFromDOM)
+                        else if (descendantEl.props && descendantEl.props.onRemovedFromDOM)
                         {
-                            promises.push(descendantEl.viewProperties.onViewRemovedFromDOM());
+                            promises.push(descendantEl.props.onRemovedFromDOM(descendantEl));
                         }
                     }
                     /* eslint-enable max-depth */
@@ -900,9 +895,9 @@ define([], function()
                 {
                     await node._modelleController.onViewRemovedFromDOM();
                 }
-                else if (node.viewProperties && node.viewProperties.onViewRemovedFromDOM)
+                else if (node.props && node.props.onRemovedFromDOM)
                 {
-                    await node.viewProperties.onViewRemovedFromDOM();
+                    await node.props.onRemovedFromDOM(node);
                 }
             }
         }
@@ -1377,36 +1372,55 @@ define([], function()
         {
             properties.tag = 'div';
         }
-        if (!properties.el)
+        let el;
+        if (properties.el)
         {
-            properties.el = document.createElement(properties.tag);
+            el = properties.el;
+            delete properties.el;
+        }
+        else
+        {
+            el = document.createElement(properties.tag);
         }
 
         if (properties.id)
         {
-            properties.el.id = properties.id;
+            el.id = properties.id;
         }
 
-        let el = properties.el;
+        el.props = properties;
 
-        el.viewProperties = properties;
-
-        let customViewRemovedHandler;
-        if (properties.onViewRemovedFromDOM)
+        if (properties.eventListeners)
         {
-            customViewRemovedHandler = properties.onViewRemovedFromDOM;
+            addEventListeners(el, properties.eventListeners);
         }
-        properties.onViewRemovedFromDOM = async function()
+
+        if (properties.cleanupOnRemovedFromDOM)
         {
-            if (customViewRemovedHandler)
+            let customOnRemovedFromDOM;
+            if (properties.onRemovedFromDOM)
             {
-                await customViewRemovedHandler(el.viewProperties);
+                customOnRemovedFromDOM = properties.onRemovedFromDOM;
             }
-            delete el.viewProperties;
-            delete el._modelleActualEventListeners;
-        };
+            properties.onRemovedFromDOM = async function()
+            {
+                if (customOnRemovedFromDOM)
+                {
+                    await customOnRemovedFromDOM(el);
+                }
+                await cleanupView(el);
+            };
+        }
 
-        addEventListeners(properties.el, properties.eventListeners);
+        return el;
+    }
+
+
+    function cleanupView(el)
+    {
+        delete el.props.el;
+        delete el.props;
+        delete el._modelleActualEventListeners;
     }
 
 
@@ -1434,7 +1448,7 @@ define([], function()
                     {
                         let clonedEvent = Object.assign({}, event,
                         {
-                            viewElement: el,
+                            el,
                             target: element,
                             stopPropagation: () => event.stopPropagation(),
                             preventDefault: () => event.preventDefault()
@@ -1468,6 +1482,21 @@ define([], function()
     }
 
 
+    /**
+     * Run a function if an element is currently in the
+     * DOM or once it is added to the DOM.
+     */
+    function runOnceOnDOM(el, fn)
+    {
+        // Schedule callback for when view is added to DOM
+        setTimeout(async () =>
+        {
+            await idleUntilOnDOM(el);
+            fn();
+        }, 1);
+    }
+
+
     return {
         Model,
         Collection,
@@ -1483,6 +1512,8 @@ define([], function()
         fadeIn,
         fadeOut,
         importCSS,
-        defineView
+        defineView,
+        cleanupView,
+        runOnceOnDOM
     };
 });
