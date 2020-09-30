@@ -1366,7 +1366,7 @@ define([], function()
     }
 
 
-    function defineView(properties)
+    function createView(properties)
     {
         if (!properties.tag)
         {
@@ -1512,7 +1512,7 @@ define([], function()
         fadeIn,
         fadeOut,
         importCSS,
-        defineView,
+        createView,
         cleanupView,
         runOnceOnDOM
     };
