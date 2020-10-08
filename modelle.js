@@ -1446,7 +1446,13 @@ define([], function()
                     }
                     if (element)
                     {
-                        let clonedEvent = Object.assign({}, event,
+                        let clonedEvent = {};
+
+                        for (let key in event)
+                        {
+                            clonedEvent[key] = event[key];
+                        }
+                        Object.assign(clonedEvent,
                         {
                             el,
                             target: element,
