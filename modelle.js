@@ -1372,6 +1372,12 @@ define([], function()
         {
             properties.tag = 'div';
         }
+
+        // Cleanup view on removal by default
+        if (properties.cleanupOnRemovedFromDOM === undefined)
+        {
+            properties.cleanupOnRemovedFromDOM = true;
+        }
         let el;
         if (properties.el)
         {
@@ -1412,13 +1418,16 @@ define([], function()
             };
         }
 
+        // Create dedicated event bus for the view
+        properties.eventBus = Object.assign({}, Events);
+
         return el;
     }
 
 
     function cleanupView(el)
     {
-        delete el.props.el;
+        el.props.eventBus.stopListening();
         delete el.props;
         delete el._modelleActualEventListeners;
     }
