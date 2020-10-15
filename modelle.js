@@ -368,8 +368,12 @@ define([], function()
         }
 
 
-        async fetch(attributes)
+        async fetch(attributes, options)
         {
+            options = Object.assign(
+            {
+                triggerChanged: true
+            }, options);
             let url = await this.getUrl();
             if (typeof url === 'string')
             {
@@ -402,7 +406,10 @@ define([], function()
             }
             let response = await fetch2(url, {headers: this.getHeaders()});
             Object.assign(this, response);
-            this.trigger('changed');
+            if (options.triggerChanged)
+            {
+                this.trigger('changed');
+            }
             return this;
         }
 
@@ -1401,22 +1408,29 @@ define([], function()
             addEventListeners(el, properties.eventListeners);
         }
 
-        if (properties.cleanupOnRemovedFromDOM)
+        let customOnRemovedFromDOM;
+        if (properties.onRemovedFromDOM)
         {
-            let customOnRemovedFromDOM;
-            if (properties.onRemovedFromDOM)
-            {
-                customOnRemovedFromDOM = properties.onRemovedFromDOM;
-            }
-            properties.onRemovedFromDOM = async function()
-            {
-                if (customOnRemovedFromDOM)
-                {
-                    await customOnRemovedFromDOM(el);
-                }
-                await cleanupView(el);
-            };
+            customOnRemovedFromDOM = properties.onRemovedFromDOM;
         }
+        properties.onRemovedFromDOM = async function()
+        {
+            if (customOnRemovedFromDOM)
+            {
+                await customOnRemovedFromDOM(el);
+            }
+            if (properties.cleanupOnRemovedFromDOM)
+            {
+                if (properties.cleanupView)
+                {
+                    await properties.cleanupView(el);
+                }
+                else
+                {
+                    cleanupView(el);
+                }
+            }
+        };
 
         // Create dedicated event bus for the view
         properties.eventBus = Object.assign({}, Events);
