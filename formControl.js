@@ -71,7 +71,8 @@ define([], function()
             removeLoadingSpinner,
             getModelFormMap,
             validate,
-            getEventListeners
+            getEventListeners,
+            saveModel
         }, options);
 
         if (!options.eventListeners)
@@ -93,7 +94,8 @@ define([], function()
             onSubmitted: options.onSubmitted,
             onSubmitError: options.onSubmitError, 
             onCanceled: options.onCanceled,
-            getModelFormMap: options.getModelFormMap
+            getModelFormMap: options.getModelFormMap,
+            saveModel: options.saveModel
         });
 
         return el;
@@ -103,8 +105,8 @@ define([], function()
     function getEventListeners({submitBtnSelector, cancelBtnSelector})
     {
         let clickHandlers = {};
-        clickHandlers[submitBtnSelector] = 'submit';
-        clickHandlers[cancelBtnSelector] = 'cancel';
+        clickHandlers[submitBtnSelector] = submit;
+        clickHandlers[cancelBtnSelector] = cancel;
         return {click: clickHandlers};
     }
 
@@ -235,7 +237,7 @@ define([], function()
     }
 
 
-    async function submit(el)
+    async function submit({el})
     {
         let props = el.props;
         props.showLoadingSpinner(el);
@@ -320,7 +322,7 @@ define([], function()
     }
 
 
-    function cancel(el)
+    function cancel({el})
     {
         el.props.onCanceled();
     }
