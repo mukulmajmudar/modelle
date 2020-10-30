@@ -1,4 +1,4 @@
-define([], function()
+define(['modelle/formControl'], function(formControl)
 {
     'use strict';
 
@@ -681,191 +681,6 @@ define([], function()
     }
 
 
-    class Controller
-    {
-        constructor()
-        {
-            Object.assign(this, Events,
-            {
-                actualEventListeners: {}
-            });
-        }
-
-
-        /**
-         * Initialize the controller. For example, fetch data from a server
-         * and fetch an HTML template to render in renderView().
-         */
-        async initialize()
-        {
-            // Empty by default
-        }
-
-
-        /**
-         * Convenience method for common execution flow.
-         */
-        async run()
-        {
-            // Initialize the controller
-            await this.initialize();
-
-            // Create the view element
-            if (!this.el)
-            {
-                this.createViewElement();
-            }
-
-            // Render view
-            await this.renderView();
-        }
-
-
-        createViewElement()
-        {
-            let element = document.createElement(this.getViewElementTag());
-            this.setViewElement(element);
-        }
-
-
-        setViewElement(element)
-        {
-            const viewElementId = this.getViewElementId();
-            if (viewElementId)
-            {
-                element.id = viewElementId;
-            }
-            this.el = this.viewElement = element;
-            this.qs = this.el.querySelector.bind(this.el);
-
-            // Store reference to controller in element so it can be
-            // called back by the mutation observer
-            this.el._modelleController = this;
-
-            this.addEventListeners();
-        }
-
-
-        getViewElementTag()
-        {
-            return 'div';
-        }
-
-
-        getViewElementId()
-        {
-            return null;
-        }
-
-
-        /**
-         * Runs the given function if the view element is currently in the
-         * DOM or when it is added to the DOM.
-         */
-        runWhenViewOnDOM(fn)
-        {
-            runOnceOnDOM(this.el, fn);
-        }
-
-
-        /**
-         * Hook for when this controller's view is removed from the DOM.
-         * Usually, cleanup() should be called here. But it is not called
-         * in this base class to maintain clear separation between controller
-         * and view.
-         */
-        onViewRemovedFromDOM()
-        {
-            // Empty by default
-        }
-
-
-        cleanup()
-        {
-            this.stopListening();
-            delete this.el._modelleController;
-        }
-
-
-        getEventListeners()
-        {
-            return {};
-        }
-
-
-        renderView()
-        {
-            // Empty by default
-        }
-
-
-        addEventListeners()
-        {
-            this.removeEventListeners();
-            let eventListenersMap = this.getEventListeners();
-            for (let eventName of Object.keys(eventListenersMap))
-            {
-                let eventListeners = eventListenersMap[eventName];
-                let actualEventListener = event =>
-                {
-                    for (let selector of Object.keys(eventListeners))
-                    {
-                        let el;
-                        if (selector)
-                        {
-                            el = event.target.closest(selector);
-                        }
-                        else
-                        {
-                            // Empty selector means listen on view element
-                            el = this.el;
-                        }
-                        if (el)
-                        {
-                            let clonedEvent = Object.assign({}, event,
-                            {
-                                target: el,
-                                stopPropagation: () => event.stopPropagation(),
-                                preventDefault: () => event.preventDefault()
-                            });
-                            let listener = eventListeners[selector];
-                            if (typeof listener === 'string')
-                            {
-                                if (!this[listener])
-                                {
-                                    throw new Error('Event listener method not found.');
-                                }
-                                this[listener](clonedEvent);
-                            }
-                            else
-                            {
-                                listener(clonedEvent);
-                            }
-                            return;
-                        }
-                    }
-                };
-
-                this.el.addEventListener(eventName, actualEventListener);
-                this.actualEventListeners[eventName] = actualEventListener;
-            }
-        }
-
-
-        removeEventListeners()
-        {
-            for (let eventName of Object.keys(this.actualEventListeners))
-            {
-                this.el.removeEventListener(eventName,
-                    this.actualEventListeners[eventName]);
-            }
-
-            this.actualEventListeners = {};
-        }
-    }
-    Controller.AbortException = class extends Error {};
-
-
     let viewElementRemovedObserver = new MutationObserver(async mutations =>
     {
         for (let mutation of mutations)
@@ -884,11 +699,7 @@ define([], function()
                     /* eslint-disable max-depth */
                     for (let descendantEl of descendantEls)
                     {
-                        if (descendantEl._modelleController)
-                        {
-                            promises.push(descendantEl._modelleController.onViewRemovedFromDOM());
-                        }
-                        else if (descendantEl.props && descendantEl.props.onRemovedFromDOM)
+                        if (descendantEl.props && descendantEl.props.onRemovedFromDOM)
                         {
                             promises.push(descendantEl.props.onRemovedFromDOM(descendantEl));
                         }
@@ -897,12 +708,8 @@ define([], function()
                     await Promise.all(promises);
                 }
 
-                // If the removed node is a view itself, call cleanup
-                if (node._modelleController)
-                {
-                    await node._modelleController.onViewRemovedFromDOM();
-                }
-                else if (node.props && node.props.onRemovedFromDOM)
+                // If the removed node is a view itself, call removed callback
+                if (node.props && node.props.onRemovedFromDOM)
                 {
                     await node.props.onRemovedFromDOM(node);
                 }
@@ -1088,291 +895,6 @@ define([], function()
     }
 
 
-    class ValidationError extends Error
-    {
-        constructor(errors)
-        {
-            super();
-            if (!errors)
-            {
-                errors = {};
-            }
-            this.errors = errors;
-        }
-    }
-
-
-    class FormController extends Controller
-    {
-        constructor(options)
-        {
-            options = Object.assign(
-            {
-                errorClass: 'erroneousInput',
-
-                // Default attribute setter assigns property
-                modelAttributeSetter: (model, attribute, value) =>
-                {
-                    model[attribute] = value;
-                }
-            }, options);
-            super(options);
-            Object.assign(this,
-            {
-                submitBtnSelector: options.submitBtnSelector,
-                cancelBtnSelector: options.cancelBtnSelector,
-                model: options.model,
-                errorClass: options.errorClass,
-                modelAttributeSetter: options.modelAttributeSetter,
-                onSubmitted: options.onSubmitted ? options.onSubmitted : this.onSubmitted,
-                onSubmitError: options.onSubmitError ? options.onSubmitError : this.onSubmitError, 
-                onCanceled: options.onCanceled
-            });
-        }
-
-
-        getEventListeners()
-        {
-            let clickHandlers = {};
-            clickHandlers[this.submitBtnSelector] = 'submit';
-            clickHandlers[this.cancelBtnSelector] = 'cancel';
-            return {click: clickHandlers};
-        }
-
-
-        normalize(modelFormMap)
-        {
-            // Normalize model form map
-            for (let attribute in modelFormMap)
-            {
-                if (!(Object.prototype.hasOwnProperty.call(modelFormMap, attribute)))
-                {
-                    continue;
-                }
-                let map = modelFormMap[attribute];
-
-                // Default value transformer is identity function
-                if (!map.transformValue)
-                {
-                    map.transformValue = value => value;
-                }
-
-                // Default value reader is value property of the element
-                if (!map.formValueReader)
-                {
-                    map.formValueReader = el => el.value;
-                }
-
-                // Default error class element is the attribute element
-                if (!map.errorClassEl)
-                {
-                    map.errorClassEl = map.el;
-                }
-
-                // Default error class for each attribute is the
-                // common one
-                if (!map.errorClass)
-                {
-                    map.errorClass = this.errorClass;
-                }
-            }
-        }
-
-
-        async validate()
-        {
-            let modelFormMap = this._normalizedModelFormMap;
-
-            // Clear form of any errors
-            for (let attribute in modelFormMap)
-            {
-                if (!(Object.prototype.hasOwnProperty.call(modelFormMap, attribute)))
-                {
-                    continue;
-                }
-                let map = modelFormMap[attribute];
-                if (map.errorMessageEl)
-                {
-                    map.errorMessageEl.innerHTML = '';
-                    map.el.classList.remove(map.errorClass);
-                    map.errorMessageEl.classList.add('hidden');
-                }
-            }
-
-            await this.readFormIntoModel(modelFormMap);
-            try
-            {
-                await this.model.validate();
-            }
-            catch(e)
-            {
-                /* eslint-disable max-depth */
-                if (e instanceof ValidationError)
-                {
-                    for (let erroneousAttribute in e.errors)
-                    {
-                        if (!(Object.prototype.hasOwnProperty.call(e.errors, erroneousAttribute)))
-                        {
-                            continue;
-                        }
-                        const error = e.errors[erroneousAttribute];
-                        let mapping = modelFormMap[erroneousAttribute];
-                        if (mapping.errorMessageEl)
-                        {
-                            if (error.message)
-                            {
-                                mapping.errorMessageEl.innerHTML = error.message;
-                            }
-                            else if (mapping.errorMessages && mapping.errorMessages[error.code])
-                            {
-                                mapping.errorMessageEl.innerHTML = mapping.errorMessages[error.code];
-                            }
-                        }
-                        else
-                        {
-                            if (mapping.errorMessages && mapping.errorMessages[error.code])
-                            {
-                                mapping.errorMessages[error.code]();
-                            }
-                        }
-                        mapping.el.classList.add(mapping.errorClass);
-                        if (mapping.errorMessageEl)
-                        {
-                            mapping.errorMessageEl.classList.remove('hidden');
-                        }
-                    }
-                }
-                /* eslint-enable max-depth */
-
-                throw e;
-            }
-        }
-
-
-        async readFormIntoModel(modelFormMap)
-        {
-            for (let attribute in modelFormMap)
-            {
-                if (!(Object.prototype.hasOwnProperty.call(modelFormMap, attribute)))
-                {
-                    continue;
-                }
-                let mapping = modelFormMap[attribute];
-                const formValue = await mapping.formValueReader(mapping.el);
-                const value = await mapping.transformValue(formValue);
-                this.modelAttributeSetter(this.model, attribute, value);
-            }
-        }
-
-
-        async submit()
-        {
-            this.showLoadingSpinner();
-            this._normalizedModelFormMap = this.getModelFormMap();
-            this.normalize(this._normalizedModelFormMap);
-            this.disableAllInputs();
-            try
-            {
-                try
-                {
-                    await this.validate();
-                }
-                catch(e)
-                {
-                    if (!(e instanceof ValidationError))
-                    {
-                        this.onSubmitError(e);
-                    }
-                    return;
-                }
-                try
-                {
-                    await this.saveModel();
-                }
-                catch(e)
-                {
-                    this.onSubmitError(e);
-                    return;
-                }
-                this.onSubmitted();
-            }
-            finally
-            {
-                this.removeLoadingSpinner();
-                this.enableAllInputs();
-            }
-        }
-
-
-        disableAllInputs()
-        {
-            for (let attribute of Object.keys(this._normalizedModelFormMap))
-            {
-                let map = this._normalizedModelFormMap[attribute];
-                if (map.disableInput)
-                {
-                    map.disableInput();
-                    continue;
-                }
-                map.el.disabled = true;
-            }
-            this.qs(this.submitBtnSelector).disabled = true;
-        }
-
-
-        enableAllInputs()
-        {
-            for (let attribute of Object.keys(this._normalizedModelFormMap))
-            {
-                let map = this._normalizedModelFormMap[attribute];
-                if (map.enableInput)
-                {
-                    map.enableInput();
-                    continue;
-                }
-                map.el.disabled = false;
-            }
-            this.qs(this.submitBtnSelector).disabled = false;
-        }
-
-
-        showLoadingSpinner()
-        {
-            // Override
-        }
-
-
-        removeLoadingSpinner()
-        {
-            // Override
-        }
-
-
-        cancel()
-        {
-            this.onCanceled();
-        }
-
-
-        /**
-         * Override to provide a map of model attribute => form components.
-         */
-        getModelFormMap()
-        {
-            throw new Error('not implemented');
-        }
-
-
-        /**
-         * Override to customize how to save the model.
-         */
-        async saveModel()
-        {
-            await this.model.save();
-        }
-    }
-
-
     function createView(properties)
     {
         if (!properties.tag)
@@ -1381,6 +903,7 @@ define([], function()
         }
 
         // Cleanup view on removal by default
+        // eslint-disable-next-line
         if (properties.cleanupOnRemovedFromDOM === undefined)
         {
             properties.cleanupOnRemovedFromDOM = true;
@@ -1453,7 +976,9 @@ define([], function()
         for (let eventName of Object.keys(eventListenersMap))
         {
             let eventListeners = eventListenersMap[eventName];
-            let actualEventListener = event =>
+
+            // eslint-disable-next-line
+            function actualEventListener(event)
             {
                 for (let selector of Object.keys(eventListeners))
                 {
@@ -1471,6 +996,7 @@ define([], function()
                     {
                         let clonedEvent = {};
 
+                        // eslint-disable-next-line
                         for (let key in event)
                         {
                             clonedEvent[key] = event[key];
@@ -1487,7 +1013,7 @@ define([], function()
                         return;
                     }
                 }
-            };
+            }
 
             el.addEventListener(eventName, actualEventListener);
             el._modelleActualEventListeners[eventName] = actualEventListener;
@@ -1529,9 +1055,7 @@ define([], function()
     return {
         Model,
         Collection,
-        Controller,
-        FormController,
-        ValidationError,
+        formControl,
         fetch: fetch2,
         FetchError,
         HttpError,
