@@ -77,7 +77,7 @@ define([], function()
 
         if (!options.eventListeners)
         {
-            options.eventListeners = options.getEventListeners();
+            options.eventListeners = options.getEventListeners(options);
         }
 
         // Create view

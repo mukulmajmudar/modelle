@@ -1,7 +1,7 @@
 # Modelle: JavaScript MVC Clarified
 
 ## Why?
-Few JavaScript frameworks properly separate view and control logic concerns in accordance with the [Model-View-Controller](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller) design pattern. In most popular frameworks, the control logic is merged in with the view, which makes UI development less intuitive and fools you into believing that the view is something which it is not.
+Few JavaScript frameworks properly separate view and control logic concerns in accordance with the [Model-View-Controller](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller) design pattern. In most popular frameworks, control logic is encouraged to be embedded in the view, which makes UI development less intuitive and fools you into believing that the view is something which it is not.
 
 Fundamentally, data is separate from operations on that data, and a framework should support precise implementation of design principles.
 
