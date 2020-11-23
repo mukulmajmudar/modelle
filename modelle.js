@@ -3,7 +3,7 @@ define(['modelle/formControl'], function(formControl)
     'use strict';
 
     /* eslint-disable */
-  // Backbone.Events
+  // Events
   // ---------------
 
   // A module that can be mixed in to *any object* in order to provide it with
@@ -12,7 +12,7 @@ define(['modelle/formControl'], function(formControl)
   // succession.
   //
   //     var object = {};
-  //     _.extend(object, Backbone.Events);
+  //     _.extend(object, Events);
   //     object.on('expand', function(){ alert('expanded'); });
   //     object.trigger('expand');
   //
@@ -248,7 +248,7 @@ define(['modelle/formControl'], function(formControl)
 
   // A difficult-to-believe, but optimized internal dispatch function for
   // triggering events. Tries to keep the usual cases speedy (most internal
-  // Backbone events have 3 arguments).
+  // Events have 3 arguments).
   var triggerEvents = function(events, args) {
     var ev, i = -1, l = events.length, a1 = args[0], a2 = args[1], a3 = args[2];
     switch (args.length) {
