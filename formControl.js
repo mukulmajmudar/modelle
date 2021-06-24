@@ -70,7 +70,7 @@ define([], function()
             showLoadingSpinner,
             removeLoadingSpinner,
             getModelFormMap,
-            validate,
+            validateModel,
             getEventListeners,
             saveModel
         }, options);
@@ -174,7 +174,7 @@ define([], function()
         await readFormIntoModel(el, modelFormMap);
         try
         {
-            await props.model.validate();
+            await props.validateModel();
         }
         catch(e)
         {
@@ -334,6 +334,12 @@ define([], function()
     function getModelFormMap(el)
     {
         throw new Error('not implemented');
+    }
+
+
+    async function validateModel(el)
+    {
+        await el.props.model.validate();
     }
 
 
