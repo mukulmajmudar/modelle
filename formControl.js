@@ -174,7 +174,7 @@ define([], function()
         await readFormIntoModel(el, modelFormMap);
         try
         {
-            await props.validateModel();
+            await props.validateModel(el);
         }
         catch(e)
         {
@@ -248,7 +248,7 @@ define([], function()
         {
             try
             {
-                await props.validate(el);
+                await validate(el);
             }
             catch(e)
             {
