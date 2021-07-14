@@ -71,6 +71,7 @@ define([], function()
             removeLoadingSpinner,
             getModelFormMap,
             validateModel,
+            validate,
             getEventListeners,
             saveModel
         }, options);
@@ -150,6 +151,12 @@ define([], function()
     }
 
 
+    /**
+     * Validate the form.
+     *
+     * This can be overridden by passing in a custom validate() function into
+     * createView().
+     */
     async function validate(el)
     {
         let props = el.props;
@@ -248,7 +255,7 @@ define([], function()
         {
             try
             {
-                await validate(el);
+                await props.validate(el);
             }
             catch(e)
             {
@@ -337,6 +344,10 @@ define([], function()
     }
 
 
+    /**
+     * Validate the data in the form. Override by passing in a custom
+     * validateModel() function into createView().
+     */
     async function validateModel(el)
     {
         await el.props.model.validate();
