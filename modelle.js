@@ -1,4 +1,4 @@
-define(['modelle/formControl'], function(formControl)
+define(['modelleFormControl'], function(formControl)
 {
     'use strict';
 
@@ -532,7 +532,7 @@ define(['modelle/formControl'], function(formControl)
     let loadedStyleSheets = {};
 
     /**
-     * Adapted from http://stackoverflow.com/a/5537911/1196816
+     * Adapted from http://stackoverflow.com/a/5537911
      */
     function loadStyleSheet(styleSheet, options)
     {
@@ -615,6 +615,16 @@ define(['modelle/formControl'], function(formControl)
     }
 
 
+    /**
+     * Properties:
+ * 1. tag (optional): HTML tag of the element (default = 'div')
+ * 2. el (optional): HTML element (if undefined, a new element will be created with the specified tag).
+ * 3. id (optional): ID to be assigned to the HTML element.
+ * 4. eventListeners (optional): object containing delegated event listeners.
+ * 5. cleanupView (optional): function to be called when the view is to be cleaned up.
+ * 6. cleanupOnRemovedFromDOM (optional, default = true): whether to call cleanupView() when the view element is removed from the DOM.
+ * 7. onRemovedFromDOM (optional): function to be called when the view element is removed from the DOM.
+     */
     function createView(properties)
     {
         if (!properties.tag)

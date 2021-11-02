@@ -70,20 +70,21 @@ define([], function()
             showLoadingSpinner,
             removeLoadingSpinner,
             getModelFormMap,
-            validateModel,
             validate,
-            getEventListeners,
-            saveModel
+            readAndValidate,
+            eventListeners: getEventListeners(options)
         }, options);
 
-        if (!options.eventListeners)
+        if (!options.model)
         {
-            options.eventListeners = options.getEventListeners(options);
+            options.model = new Object();
         }
 
-        // Create view
+        // Import here to avoid circular dependency
         let modelle = await asyncRequire('modelle');
-        let el = modelle.createView(options);
+
+        // Create view
+        let el = await modelle.createView(options);
 
         Object.assign(el.props,
         {
@@ -92,11 +93,9 @@ define([], function()
             model: options.model,
             errorClass: options.errorClass,
             modelAttributeSetter: options.modelAttributeSetter,
-            onSubmitted: options.onSubmitted,
-            onSubmitError: options.onSubmitError, 
-            onCanceled: options.onCanceled,
             getModelFormMap: options.getModelFormMap,
-            saveModel: options.saveModel
+            submit: options.submit,
+            cancel: options.cancel
         });
 
         return el;
@@ -106,8 +105,8 @@ define([], function()
     function getEventListeners({submitBtnSelector, cancelBtnSelector})
     {
         let clickHandlers = {};
-        clickHandlers[submitBtnSelector] = submit;
-        clickHandlers[cancelBtnSelector] = cancel;
+        clickHandlers[submitBtnSelector] = onSubmitClicked;
+        clickHandlers[cancelBtnSelector] = onCancelClicked;
         return {click: clickHandlers};
     }
 
@@ -157,7 +156,7 @@ define([], function()
      * This can be overridden by passing in a custom validate() function into
      * createView().
      */
-    async function validate(el)
+    async function readAndValidate(el)
     {
         let props = el.props;
         let modelFormMap = props._normalizedModelFormMap;
@@ -181,7 +180,7 @@ define([], function()
         await readFormIntoModel(el, modelFormMap);
         try
         {
-            await props.validateModel(el);
+            await props.validate(el);
         }
         catch(e)
         {
@@ -244,7 +243,7 @@ define([], function()
     }
 
 
-    async function submit({el})
+    async function onSubmitClicked({el})
     {
         let props = el.props;
         props.showLoadingSpinner(el);
@@ -253,28 +252,8 @@ define([], function()
         disableAllInputs(el);
         try
         {
-            try
-            {
-                await props.validate(el);
-            }
-            catch(e)
-            {
-                if (!(e instanceof ValidationError))
-                {
-                    props.onSubmitError(el, e);
-                }
-                return;
-            }
-            try
-            {
-                await props.saveModel(el);
-            }
-            catch(e)
-            {
-                props.onSubmitError(el, e);
-                return;
-            }
-            props.onSubmitted(el);
+            await props.readAndValidate(el);
+            await props.submit(el);
         }
         finally
         {
@@ -329,9 +308,9 @@ define([], function()
     }
 
 
-    function cancel({el})
+    function onCancelClicked({el})
     {
-        el.props.onCanceled();
+        el.props.cancel(el);
     }
 
 
@@ -346,20 +325,11 @@ define([], function()
 
     /**
      * Validate the data in the form. Override by passing in a custom
-     * validateModel() function into createView().
+     * validate() function into createView().
      */
-    async function validateModel(el)
+    async function validate(el)
     {
         await el.props.model.validate();
-    }
-
-
-    /**
-     * Override to customize how to save the model.
-     */
-    async function saveModel(el)
-    {
-        await el.props.model.save();
     }
 
 
