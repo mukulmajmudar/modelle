@@ -34,7 +34,7 @@ async function createView(options)
 
     if (!options.model)
     {
-        options.model = new Object();
+        options.model = {};
     }
 
     // Import here to avoid circular dependency
