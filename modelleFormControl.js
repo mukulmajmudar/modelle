@@ -151,9 +151,9 @@ define([], function()
 
 
     /**
-     * Validate the form.
+     * Read and validate the form.
      *
-     * This can be overridden by passing in a custom validate() function into
+     * This can be overridden by passing in a custom readAndValidate() function into
      * createView().
      */
     async function readAndValidate(el)
@@ -333,5 +333,5 @@ define([], function()
     }
 
 
-    return {createView, validate, getEventListeners, ValidationError};
+    return {createView, readAndValidate, getEventListeners, ValidationError};
 });

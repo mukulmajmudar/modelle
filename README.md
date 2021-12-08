@@ -17,7 +17,7 @@ For each UI component, you create two files: `view.html` and `control.js`. The `
 
 Any state that needs to be shared is stored in the property `props` of the HTML element. The element itself is passed in to each function of the control module.
 
-`createView(options)` supports the following arguments:
+`createView(options)` supports the following options:
 * `tag` (optional, default = `'div'`): HTML tag of the element.
 * `el` (optional): HTML element (if undefined, a new element will be created with the specified tag)
 * `id` (optional): ID to be assigned to the HTML element.
@@ -39,6 +39,7 @@ Options:
 * `submitBtnSelector`: CSS selector for the form's submit button.
 * `submit`: function to handle form submission, of the form `el => { // submit form }`. When this function is called, `el.props.model` has already been populated from the form fields and validation has succeeded.
 * `getModelFormMap`: a mapping of model attributes to form components, of the following form: 
+
         {
             modelAttribute1:
             {
@@ -59,11 +60,10 @@ Options:
                 ...
             }
         }
+
 * `model` (optional): data model to which form fields will be mapped. If not specified, a new Object will be created to store the attributes.
 * `cancelBtnSelector` (optional): CSS selector for the form's cancel button.
-* `onSubmitted` (optional): Function to call upon successful form submission, of the form `el => { // handle form submission success }`
-* `onSubmitError` (optional): Function to call upon form submission error, of the form `(el, e) => { // handle form submission error }`
-* `onCanceled` (optional): Function to call upon form cancellation.
+* `cancel` (optional): Function to call upon form cancellation.
 * `errorClass` (optional): CSS class to be added to an erroreous field. The default is 'erroneousInput'.
 * `validate` (optional): function for validating the model after storing data into it from the form. The default is `el => el.props.model.validate()`.
 * `readAndValidate` (optional): function to override the entire read-and-validation process (including reading the form into the model, calling validate(), handling errors, etc.). Usually not needed as the default version is sufficient for most cases.

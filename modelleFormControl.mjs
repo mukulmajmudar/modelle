@@ -108,9 +108,9 @@ function normalize(el, modelFormMap)
 
 
 /**
- * Validate the form.
+ * Read and validate the form.
  *
- * This can be overridden by passing in a custom validate() function into
+ * This can be overridden by passing in a custom readAndValidate() function into
  * createView().
  */
 async function readAndValidate(el)
@@ -290,4 +290,4 @@ async function validate(el)
 }
 
 
-export default {createView, validate, getEventListeners, ValidationError};
+export default {createView, readAndValidate, getEventListeners, ValidationError};
