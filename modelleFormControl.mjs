@@ -200,7 +200,7 @@ async function readFormIntoModel(el, modelFormMap)
 }
 
 
-async function onSubmitClicked({el})
+async function onSubmitClicked(el)
 {
     let props = el.props;
     props.showLoadingSpinner(el);
@@ -265,7 +265,7 @@ function removeLoadingSpinner()
 }
 
 
-function onCancelClicked({el})
+function onCancelClicked(el)
 {
     el.props.cancel(el);
 }

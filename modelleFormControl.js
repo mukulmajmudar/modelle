@@ -243,7 +243,7 @@ define([], function()
     }
 
 
-    async function onSubmitClicked({el})
+    async function onSubmitClicked(el)
     {
         let props = el.props;
         props.showLoadingSpinner(el);
@@ -308,7 +308,7 @@ define([], function()
     }
 
 
-    function onCancelClicked({el})
+    function onCancelClicked(el)
     {
         el.props.cancel(el);
     }

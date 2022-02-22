@@ -694,56 +694,104 @@ define(['modelleFormControl'], function(formControl)
 
     function cleanupView(el)
     {
+        removeEventListeners(el);
         el.props.eventBus.stopListening();
         delete el.props;
-        delete el._modelleActualEventListeners;
     }
 
 
     function addEventListeners(el, eventListenersMap)
     {
         removeEventListeners(el);
+        el._modelleActualEventListeners = {};
         for (let eventName of Object.keys(eventListenersMap))
         {
             let eventListeners = eventListenersMap[eventName];
 
-            // eslint-disable-next-line
-            function actualEventListener(event)
+            /* eslint-disable */
+            async function actualEventListener(event)
             {
+                // Make a list of non-empty selectors to process:
+                // To support event delegation with potentially nested delegators
+                // we have to process in order of innermost to outermost.
+                let selectorsToProcess = [];
+                let processViewElEvent;
                 for (let selector of Object.keys(eventListeners))
                 {
-                    let element;
                     if (selector)
                     {
-                        element = event.target.closest(selector);
+                        selectorsToProcess.push(selector);
                     }
                     else
                     {
-                        // Empty selector means listen on view element
-                        element = el;
-                    }
-                    if (element)
-                    {
-                        let clonedEvent = {};
-
-                        // eslint-disable-next-line
-                        for (let key in event)
-                        {
-                            clonedEvent[key] = event[key];
-                        }
-                        Object.assign(clonedEvent,
-                        {
-                            el,
-                            target: element,
-                            stopPropagation: () => event.stopPropagation(),
-                            preventDefault: () => event.preventDefault()
-                        });
-                        let listener = eventListeners[selector];
-                        listener(clonedEvent);
-                        return;
+                        processViewElEvent = true;
                     }
                 }
+
+                // Store references to the original stop propagation functions
+                let origStopPropagation = event.stopPropagation.bind(event);
+                let origStopImmPropagation = event.stopImmediatePropagation.bind(event);
+                
+                // Overwrite stop propagation methods: since we are handling
+                // the bubbling manually, these methods have to be customized.
+                Object.assign(event,
+                {
+                    stopPropagation: function()
+                    {
+                        // Call original stopPropagation()
+                        origStopPropagation();
+
+                        // Stop processing all other selectors
+                        selectorsToProcess.splice(0);
+                    },
+                    stopImmediatePropagation: function()
+                    {
+                        // Call original stopImmediatePropagation()
+                        origStopImmPropagation();
+
+                        // Stop processing all other selectors
+                        selectorsToProcess.splice(0);
+                    }
+                });
+
+                while (selectorsToProcess.length > 0)
+                {
+                    // Find the innermost element to process
+                    let selectorsCommaSeparated = selectorsToProcess.join(', ');
+                    let element = event.target.closest(selectorsCommaSeparated);
+
+                    // If no matching element found, we are done processing
+                    if (!element)
+                    {
+                        break;
+                    }
+
+                    // Find the selector that was matched
+                    let selector = selectorsToProcess.find(s => element.matches(s));
+
+                    // Provide delegator target element in the event
+                    event.delegatorTarget = element;
+
+                    // Call the event listener
+                    let listener = eventListeners[selector];
+                    await listener(el, event);
+
+                    // Remove selector from list to process (mark as done)
+                    selectorsToProcess = selectorsToProcess.filter(s => s !== selector);
+                }
+
+                // Lastly, process event on the view element, if any
+                if (processViewElEvent)
+                {
+                    // Provide delegator target element in the event
+                    event.delegatorTarget = el;
+
+                    // Call the event listener
+                    let listener = eventListeners[''];
+                    await listener(el, event);
+                }
             }
+            /* eslint-enable */
 
             el.addEventListener(eventName, actualEventListener);
             el._modelleActualEventListeners[eventName] = actualEventListener;
@@ -755,15 +803,14 @@ define(['modelleFormControl'], function(formControl)
     {
         if (!el._modelleActualEventListeners)
         {
-            el._modelleActualEventListeners = {};
+            return;
         }
-        for (let eventName of Object.keys(el._modelleActualEventListeners))
+        for (let [eventName, eventListener] of Object.entries(el._modelleActualEventListeners))
         {
-            el.removeEventListener(eventName,
-                el._modelleActualEventListeners[eventName]);
+            el.removeEventListener(eventName, eventListener);
         }
 
-        el._modelleActualEventListeners = {};
+        delete el._modelleActualEventListeners;
     }
 
 
@@ -795,6 +842,8 @@ define(['modelleFormControl'], function(formControl)
         importCSS,
         createView,
         cleanupView,
-        runOnceOnDOM
+        runOnceOnDOM,
+        addEventListeners,
+        removeEventListeners
     };
 });
