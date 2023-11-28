@@ -12,7 +12,7 @@ define(['modelleFormControl'], function(formControl)
   // succession.
   //
   //     var object = {};
-  //     _.extend(object, Events);
+  //     Object.assign(object, Events);
   //     object.on('expand', function(){ alert('expanded'); });
   //     object.trigger('expand');
   //
@@ -29,7 +29,7 @@ define(['modelleFormControl'], function(formControl)
     if (name && typeof name === 'object') {
       // Handle event maps.
       if (callback !== void 0 && 'context' in opts && opts.context === void 0) opts.context = callback;
-      for (names = _.keys(name); i < names.length ; i++) {
+      for (names = Object.keys(name); i < names.length ; i++) {
         events = eventsApi(iteratee, events, names[i], name[names[i]], opts);
       }
     } else if (name && eventSplitter.test(name)) {
@@ -66,19 +66,25 @@ define(['modelleFormControl'], function(formControl)
     return obj;
   };
 
+  let idCounter = 0;
+  function uniqueId(prefix) {
+    let id = ++idCounter + '';
+    return prefix ? prefix + id : id;
+  }
+
   // Inversion-of-control versions of `on`. Tell *this* object to listen to
   // an event in another object... keeping track of what it's listening to
   // for easier unbinding later.
   Events.listenTo = function(obj, name, callback) {
     if (!obj) return this;
-    var id = obj._listenId || (obj._listenId = _.uniqueId('l'));
+    var id = obj._listenId || (obj._listenId = uniqueId('l'));
     var listeningTo = this._listeningTo || (this._listeningTo = {});
     var listening = listeningTo[id];
 
     // This object is not listening to any other events on `obj` yet.
     // Setup the necessary references to track the listening callbacks.
     if (!listening) {
-      var thisId = this._listenId || (this._listenId = _.uniqueId('l'));
+      var thisId = this._listenId || (this._listenId = uniqueId('l'));
       listening = listeningTo[id] = {obj: obj, objId: id, id: thisId, listeningTo: listeningTo, count: 0};
     }
 
@@ -118,7 +124,7 @@ define(['modelleFormControl'], function(formControl)
     var listeningTo = this._listeningTo;
     if (!listeningTo) return this;
 
-    var ids = obj ? [obj._listenId] : _.keys(listeningTo);
+    var ids = obj ? [obj._listenId] : Object.keys(listeningTo);
 
     for (var i = 0; i < ids.length; i++) {
       var listening = listeningTo[ids[i]];
@@ -142,7 +148,7 @@ define(['modelleFormControl'], function(formControl)
 
     // Delete all events listeners and "drop" events.
     if (!name && !callback && !context) {
-      var ids = _.keys(listeners);
+      var ids = Object.keys(listeners);
       for (; i < ids.length; i++) {
         listening = listeners[ids[i]];
         delete listeners[listening.id];
@@ -151,7 +157,7 @@ define(['modelleFormControl'], function(formControl)
       return;
     }
 
-    var names = name ? [name] : _.keys(events);
+    var names = name ? [name] : Object.keys(events);
     for (; i < names.length; i++) {
       name = names[i];
       var handlers = events[name];
@@ -194,7 +200,7 @@ define(['modelleFormControl'], function(formControl)
   // once for each event, not once for a combination of all events.
   Events.once = function(name, callback, context) {
     // Map the event into a `{event: once}` object.
-    var events = eventsApi(onceMap, {}, name, callback, _.bind(this.off, this));
+    var events = eventsApi(onceMap, {}, name, callback, this.off.bind(this));
     if (typeof name === 'string' && context == null) callback = void 0;
     return this.on(events, callback, context);
   };
@@ -202,15 +208,27 @@ define(['modelleFormControl'], function(formControl)
   // Inversion-of-control versions of `once`.
   Events.listenToOnce = function(obj, name, callback) {
     // Map the event into a `{event: once}` object.
-    var events = eventsApi(onceMap, {}, name, callback, _.bind(this.stopListening, this, obj));
+    var events = eventsApi(onceMap, {}, name, callback, this.stopListening.bind(this, obj));
     return this.listenTo(obj, events);
   };
+
+  function callOnce(fn)
+  {
+    let called = false;
+    return function(...args) {
+      if (!called)
+      {
+        called = true;
+        return fn.apply(this, args);
+      }
+    };
+  }
 
   // Reduces the event callbacks into a map of `{event: onceWrapper}`.
   // `offer` unbinds the `onceWrapper` after it has been called.
   var onceMap = function(map, name, callback, offer) {
     if (callback) {
-      var once = map[name] = _.once(function() {
+      var once = map[name] = callOnce(function() {
         offer(name, once);
         callback.apply(this, arguments);
       });
