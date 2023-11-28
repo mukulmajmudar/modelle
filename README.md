@@ -1,14 +1,14 @@
-# Modelle: Intuitive, Minimal JavaScript UI Framework
+# Modelle: JavaScript View-Controller Library
 
 ## Why?
-Few JavaScript frameworks allow clean separation of view and control logic concerns in accordance with the [Model-View-Controller](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller) design pattern. Most frameworks are designed around the concept of a JavaScript class that represents the view, with control logic embedded in the same class. But this adds an unnecessary layer of abstraction, when there already exists a standardized JavaScript abstraction for the view: the HTML element. What is typically called "view" in JavaScript frameworks is actually all control logic. This misconception is the reason why web UI development has been so framework-dependent, unintuitive, and difficult to maintain.
+Few JavaScript MVC libraries or frameworks allow true separation of view and control logic concerns in accordance with the [Model-View-Controller](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller) design pattern. Most are designed around the concept of a JavaScript class that represents the view, with control logic embedded in the same class. But this adds an unnecessary layer of abstraction, when there already exists a standardized JavaScript abstraction for the view: the HTML element. What is typically called "view" in other JavaScript frameworks is actually all control logic. This misconception is the reason why web UI development has been so framework-dependent, unintuitive, and difficult to maintain.
 
-In web-based user interfaces, the view is already modeled by the HTML element, and should not be modeled again as a JavaScript class. JavaScript code that builds the view, maps data to/from it, and handles user interaction is control logic, with a [separate concern](https://en.wikipedia.org/wiki/Separation_of_concerns) than that of the view.
+In web-based user interfaces, the view is already modeled by the HTML element, and should not be modeled again as a JavaScript class. JavaScript code that builds the view, maps data to/from it, and handles user interaction is functional control logic, with a [separate concern](https://en.wikipedia.org/wiki/Separation_of_concerns) than that of the view.
 
-Modelle is a simple framework that allows and encourages you to maintain clean separation between views and control logic, bringing clarity and agility to web-based user interface design.
+Modelle is a simple library that allows and encourages you to maintain clean separation between views and control logic, bringing clarity to web-based user interface design.
 
 ## How Modelle UI Components Work
-Modelle does not reinvent the wheel or introduce new syntax, but rather facilitates precision and simplicity in standard JavaScript, HTML, and CSS.
+Modelle provides a method of implementing the view and controller parts of the MVC paradigm. It does not reinvent the wheel or introduce new syntax, but rather facilitates precision and simplicity in ordinary JavaScript, HTML, and CSS.
 
 For each UI component, you create two files: `view.html` and `control.js`. The `control.js` contains a function called `createView()`, where you:
 1. Call the library function `modelle.createView(options)` to create the HTML element and bind event listeners declaratively. 
