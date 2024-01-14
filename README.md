@@ -10,14 +10,16 @@ Modelle is a simple library that allows and encourages you to maintain clean sep
 ## How Modelle UI Components Work
 Modelle provides a method of implementing the view and controller parts of the MVC paradigm. It does not reinvent the wheel or introduce new syntax, but rather facilitates precision and simplicity in ordinary JavaScript, HTML, and CSS.
 
-For each UI component, you create two files: `view.html` and `control.js`. The `control.js` contains a function called `createView()`, where you:
-1. Call the library function `modelle.createView(options)` to create the HTML element and bind event listeners declaratively. 
-2. Fetch the `view.html` template and optionally other data.
+For each UI component, you create one JavaScript module for the control logic and one HTML template file that describes the view. The JavaScript module exports at minimum a function called `createView()`, where you:
+
+1. Call the library function `modelle.createView(props)` to create the HTML element and bind event listeners declaratively. 
+2. Fetch the html template and optionally other data.
 3. Render the template into the HTML element that was created in step 1.
 
-Any state that needs to be shared is stored in the property `props` of the HTML element. The element itself is passed in to each function of the control module.
+Any state for the component is stored in the property `props` of the HTML element. Other functions with additional control logic can be created as needed. The element itself (i.e., the view) is passed in to each function of the control module.
 
-`createView(options)` supports the following options:
+`createView(props)` supports the following properties:
+
 * `tag` (optional, default = `'div'`): HTML tag of the element.
 * `el` (optional): HTML element (if undefined, a new element will be created with the specified tag)
 * `id` (optional): ID to be assigned to the HTML element.
@@ -26,16 +28,117 @@ Any state that needs to be shared is stored in the property `props` of the HTML 
 * `cleanupOnRemovedFromDOM` (optional, default = `true`): whether to call cleanupView() when the view element is removed from the DOM.
 * `onRemovedFromDOM` (optional): function to be called when the view element is removed from the DOM.
 
-`createView()` returns the HTML element that was created or passed in. The `options` argument that is passed in is assigned as a property called `props` to the element, along with an additional `eventBus` property (`el.props.eventBus`) that
+`createView()` returns the HTML element that was created or passed in. The `props` argument that is passed in is assigned as a property called `props` to the element, along with an additional `eventBus` property (`el.props.eventBus`) that
 can be used for event management.
 
+### Example
+Below is an example of a simple UI component called `Items`.
+
+```
+/**
+ * @file Items/Items.js
+ */
+
+async function createView(props)
+{
+    // Create the view
+    let el = modelle.createView(
+    {
+        // Overridable defaults - also indicate what can be passed in as props
+        arg1: 123,
+        user: null,
+        tag: 'section',
+
+        // Override with properties passed in
+        ...props,
+
+        // Unoverridable properties
+        arg2: 456,
+        eventListeners
+    });
+
+    await refreshView(el);
+
+    // ...other view creation logic
+
+    return el;
+}
+
+
+let eventListeners =
+{
+    click:
+    {
+        '.item': onItemClicked,
+        '#refresh': refreshView
+    }
+}
+
+
+async function refreshView(el)
+{
+    let [items, html] = await Promise.all(
+    [
+        // Fetch items from API
+        api.fetch_items(el.props.user.id),
+
+        // Fetch view HTML
+        modelle.fetch('Items/Items.html')
+    ]);
+
+    // Render HTML template and add to the view
+    el.innerHTML = render_template(html, {items});
+
+    // ...other view refresh logic
+}
+
+
+function onItemClicked(el, event)
+{
+    const itemId = event.delegatorTarget.dataset.itemId;
+    let item = el.props.items.find(i => i.id === itemId);
+    submitItem(el, item);
+}
+
+
+function submitItem(el, item)
+{
+    api.submit(
+    {
+        arg1: el.props.arg1,
+        arg2: el.props.arg2,
+        item
+    });
+}
+
+
+export default {createView};
+```
+
+```
+<!-- Items/Items.html -->
+<style>
+.item
+{
+    padding: 10px;
+}
+</style>
+
+<!-- Generic templating syntax shown - use your preferred template library -->
+{{#items}}
+    <div id='{{item.id}} class='item'>{{item.name}}</div>
+{{/items}}
+<button id='refresh'>Refresh</button>
+```
+
 ## Declarative Control Logic for Forms
-`modelle.formControl.createView(options)`
+`modelle.formControl.createView(props)`
 
 Declarative form control logic, including mapping to a data model from form fields, validation, form submission, and error handling. 
 
-Options:
-* All options of `modelle.createView()` above.
+Properties:
+
+* All properties of `modelle.createView()` above.
 * `submitBtnSelector`: CSS selector for the form's submit button.
 * `submit`: function to handle form submission, of the form `el => { // submit form }`. When this function is called, `el.props.model` has already been populated from the form fields and validation has succeeded.
 * `getModelFormMap`: a mapping of model attributes to form components, of the following form: 
