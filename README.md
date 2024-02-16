@@ -12,7 +12,7 @@ Modelle provides a method of implementing the view and controller parts of the M
 
 For each UI component, you create one JavaScript module for the control logic and one HTML template file that describes the view. The JavaScript module exports at minimum a function called `createView()`, where you:
 
-1. Call the library function `modelle.createView(props)` to create the HTML element and bind event listeners declaratively. 
+1. Call the library function `Modelle.createView(props)` to create the HTML element and bind event listeners declaratively. 
 2. Fetch the html template and optionally other data.
 3. Render the template into the HTML element that was created in step 1.
 
@@ -42,7 +42,7 @@ Below is an example of a simple UI component called `Items`.
 async function createView(props)
 {
     // Create the view
-    let el = modelle.createView(
+    let el = Modelle.createView(
     {
         // Overridable defaults - also indicate what can be passed in as props
         arg1: 123,
@@ -83,7 +83,7 @@ async function refreshView(el)
         api.fetch_items(el.props.user.id),
 
         // Fetch view HTML
-        modelle.fetch('Items/Items.html')
+        Modelle.fetch('Items/Items.html')
     ]);
 
     // Render HTML template and add to the view
@@ -131,14 +131,14 @@ export default {createView};
 <button id='refresh'>Refresh</button>
 ```
 
-## Declarative Control Logic for Forms
-`modelle.formControl.createView(props)`
+## Declarative Forms
+`Modelle.Form.createView(props)`
 
-Declarative form control logic, including mapping to a data model from form fields, validation, form submission, and error handling. 
+Declarative form control logic, including mapping to a data model from form fields, validation, form submission, and error handling.
 
 Properties:
 
-* All properties of `modelle.createView()` above.
+* All properties of `Modelle.createView()` above.
 * `submitBtnSelector`: CSS selector for the form's submit button.
 * `submit`: function to handle form submission, of the form `el => { // submit form }`. When this function is called, `el.props.model` has already been populated from the form fields and validation has succeeded.
 * `getModelFormMap`: a mapping of model attributes to form components, of the following form: 
@@ -176,7 +176,7 @@ Properties:
 
 ## Additional Helper Functions
 A few additional helper functions are included in Modelle:
-* `modelle.fetch(options)`: wrapper around window.fetch(options) that parses JSON and text responses and throws exceptions on errors.
-* `modelle.runOnceOnDOM(el, fn)`: Run a function if an element is currently in the DOM or once it is added to the DOM.
-* `modelle.htmlToElement(html)`: Convert an HTML string into an HTML element.
-* `modelle.htmlToElements(html)`: Convert an HTML string into multiple HTML elements.
+* `Modelle.fetch(options)`: wrapper around window.fetch(options) that parses JSON and text responses and throws exceptions on errors.
+* `Modelle.runOnceOnDOM(el, fn)`: Run a function if an element is currently in the DOM or once it is added to the DOM.
+* `Modelle.htmlToElement(html)`: Convert an HTML string into an HTML element.
+* `Modelle.htmlToElements(html)`: Convert an HTML string into multiple HTML elements.

@@ -81,10 +81,10 @@ define([], function()
         }
 
         // Import here to avoid circular dependency
-        let modelle = await asyncRequire('modelle');
+        let Modelle = await asyncRequire('Modelle');
 
         // Create view
-        let el = await modelle.createView(options);
+        let el = await Modelle.createView(options);
 
         Object.assign(el.props,
         {

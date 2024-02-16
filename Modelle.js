@@ -1,4 +1,4 @@
-define(['modelleFormControl'], function(formControl)
+define(['ModelleForm'], function(Form)
 {
     'use strict';
 
@@ -589,8 +589,8 @@ define(['modelleFormControl'], function(formControl)
 
 
     return {
-        formControl,
         fetch: fetch2,
+        Form,
         FetchError,
         HttpError,
         htmlToElement,

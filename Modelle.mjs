@@ -1,4 +1,4 @@
-import formControl from './modelleFormControl.mjs';
+import Form from './ModelleForm.mjs';
 
 class FetchError extends Error {}
 
@@ -588,8 +588,8 @@ function runOnceOnDOM(el, fn)
 
 
 export default {
-    formControl,
     fetch: fetch2,
+    Form,
     FetchError,
     HttpError,
     htmlToElement,
